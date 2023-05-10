@@ -8,10 +8,13 @@
  *********************************************************************************/
 import { ModelServerConfig } from '@borkdominik-biguml/uml-modelserver/lib/config';
 import { UmlModelServerClient } from '@borkdominik-biguml/uml-modelserver/lib/modelserver.client';
+import { AnyObject, TypeGuard } from '@eclipse-emfcloud/modelserver-client';
+import { Format } from 'esbuild';
 import { inject, injectable } from 'inversify';
 import URI from 'urijs';
 import * as vscode from 'vscode';
 import { TYPES } from '../di.types';
+import { isInVslsWorkspace } from '../liveshare/liveshare-util';
 import { ServerManager, ServerManagerStateListener } from '../server/server.manager';
 import { OutputChannel } from '../vscode/output/output.channel';
 
@@ -30,7 +33,33 @@ export class UVModelServerClient extends UmlModelServerClient implements ServerM
         }
     }
 
+    override create<M>(
+        modeluri: URI,
+        model: AnyObject | string,
+        formatOrGuard?: FormatOrGuard<M>,
+        format?: Format
+    ): Promise<AnyObject | M> {
+        if (isInVslsWorkspace()) {
+            const errMessage = 'Creating Models is not allowed as a Guest in Liveshare.';
+            vscode.window.showErrorMessage(errMessage);
+            throw new Error(errMessage); // TODO implement collaboration for ModelServerClient
+        }
+        return super.create(modeluri, model, formatOrGuard, format);
+    }
+
+    override delete(modeluri: URI): Promise<boolean> {
+        if (isInVslsWorkspace()) {
+            const errMessage = 'Deleting Models is not allowed as a Guest in Liveshare.';
+            vscode.window.showErrorMessage(errMessage);
+            throw new Error(errMessage); // TODO implement collaboration for ModelServerClient
+        }
+        return super.delete(modeluri);
+    }
+
     protected async setUpModelServer(): Promise<void> {
+        if (isInVslsWorkspace()) {
+            return; // TODO implement collaboration for ModelServerClient
+        }
         const workspaces = vscode.workspace.workspaceFolders;
         if (workspaces && workspaces.length > 0) {
             const workspaceRoot = new URI(workspaces[0].uri.toString());
@@ -64,3 +93,5 @@ export class UVModelServerClient extends UmlModelServerClient implements ServerM
         }
     }
 }
+
+type FormatOrGuard<M> = Format | TypeGuard<M>;

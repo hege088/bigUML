@@ -18,6 +18,7 @@ export const TYPES = {
     GlspServerConfig: Symbol('GlspServerConfig'),
     GlspServerLauncher: Symbol('GlspServerLauncher'),
     GlspServerLaunchOptions: Symbol('GlspServerLaunchOptions'),
+    CollaborationGlspClientProvider: Symbol('CollaborationGlspClientProvider'),
     ModelServerClient: Symbol('ModelServerClient'),
     ModelServerConfig: Symbol('ModelServerConfig'),
     ModelServerLauncher: Symbol('ModelServerLauncher'),

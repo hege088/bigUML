@@ -9,7 +9,7 @@
 import {
     Action,
     ActionMessage,
-    Args,
+    Args, CollaborationAction, getRelativeDocumentUri,
     GlspVscodeClient,
     GlspVscodeConnector,
     GlspVscodeServer,
@@ -45,8 +45,10 @@ export class UVGlspConnector<TDocument extends vscode.CustomDocument = vscode.Cu
         this.clientMap.set(client.clientId, client);
         this.documentMap.set(client.document, client.clientId);
 
+        const relativeDocumentUri = getRelativeDocumentUri(client.document.uri.path);
+
         const clientMessageListener = client.onClientMessage(message => {
-            this.onClientMessage(client, message);
+            this.onClientMessage(client, message, relativeDocumentUri);
         });
 
         const viewStateListener = client.webviewPanel.onDidChangeViewState(e => {
@@ -54,12 +56,12 @@ export class UVGlspConnector<TDocument extends vscode.CustomDocument = vscode.Cu
         });
 
         const panelOnDisposeListener = client.webviewPanel.onDidDispose(() => {
-            this.onClientDispose(client, [clientMessageListener, viewStateListener, panelOnDisposeListener]);
+            this.onClientDispose(client, [clientMessageListener, viewStateListener, panelOnDisposeListener], relativeDocumentUri);
         });
 
         // Initialize client session
         const glspClient = await this.options.server.glspClient;
-        const initializeParams = await this.createInitializeClientSessionParams(client);
+        const initializeParams = await this.createInitializeClientSessionParams(client, relativeDocumentUri);
         await glspClient.initializeClientSession(initializeParams);
         return this.options.server.initializeResult;
     }
@@ -106,10 +108,13 @@ export class UVGlspConnector<TDocument extends vscode.CustomDocument = vscode.Cu
         // return { processedMessage: GlspVscodeConnector.NO_PROPAGATION_MESSAGE, messageChanged: true };
     }
 
-    protected onClientMessage(client: GlspVscodeClient<TDocument>, message: unknown): void {
+    protected onClientMessage(client: GlspVscodeClient<TDocument>, message: unknown, relativeDocumentUri: string): void {
         if (this.options.logging) {
             if (ActionMessage.is(message)) {
-                console.log(`Client (${message.clientId}): ${message.action.kind}`, message.action);
+                // don't log CollaborationActions
+                if (!CollaborationAction.is(message.action)) {
+                    console.log(`Client (${message.clientId}): ${message.action.kind}`, message.action);
+                }
             } else {
                 console.log('Client (no action message):', message);
             }
@@ -124,6 +129,12 @@ export class UVGlspConnector<TDocument extends vscode.CustomDocument = vscode.Cu
             const filteredMessage = this.options.onBeforePropagateMessageToServer(newMessage, processedMessage, messageChanged);
 
             if (typeof filteredMessage !== 'undefined') {
+                if (ActionMessage.is(filteredMessage)) {
+                    filteredMessage.args = {
+                        ...filteredMessage.args,
+                        relativeDocumentUri
+                    }
+                }
                 this.options.server.onSendToServerEmitter.fire(filteredMessage);
             }
         });
@@ -135,7 +146,7 @@ export class UVGlspConnector<TDocument extends vscode.CustomDocument = vscode.Cu
         }
     }
 
-    protected onClientDispose(client: GlspVscodeClient<TDocument>, disposables: vscode.Disposable[]): void {
+    protected onClientDispose(client: GlspVscodeClient<TDocument>, disposables: vscode.Disposable[], relativeDocumentUri: string): void {
         this.diagnostics.set(client.document.uri, undefined); // this clears the diagnostics for the file
         this.clientMap.delete(client.clientId);
         this.documentMap.delete(client.document);
@@ -144,16 +155,17 @@ export class UVGlspConnector<TDocument extends vscode.CustomDocument = vscode.Cu
         this.options.server.glspClient.then(gc => {
             gc.disposeClientSession({
                 clientSessionId: client.clientId,
-                args: this.disposeClientSessionArgs(client)
+                args: this.disposeClientSessionArgs(client, relativeDocumentUri)
             });
         });
 
         disposables.forEach(d => d.dispose());
     }
 
-    protected disposeClientSessionArgs(client: GlspVscodeClient<TDocument>): Args | undefined {
+    protected disposeClientSessionArgs(client: GlspVscodeClient<TDocument>, relativeDocumentUri: string): Args | undefined {
         return {
-            ['sourceUri']: client.document.uri.path
+            ['sourceUri']: client.document.uri.path,
+            ['relativeDocumentUri']: relativeDocumentUri
         };
     }
 }

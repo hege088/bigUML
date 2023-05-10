@@ -17,6 +17,7 @@ import { UVGlspServer } from './glsp/uv-glsp-server';
 import { VSCodeSettings } from './language';
 import { createGLSPServerConfig, createModelServerConfig, ServerManager } from './server';
 import { configureDefaultCommands } from './vscode/command/default-commands';
+import {configureCollaborationCommands} from '@eclipse-glsp/vscode-integration';
 
 let diContainer: Container | undefined;
 
@@ -29,10 +30,17 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         modelServerConfig
     });
 
+    const connector = diContainer.get<UVGlspConnector>(TYPES.Connector);
+
     configureDefaultCommands({
         extensionContext: context,
-        connector: diContainer.get<UVGlspConnector>(TYPES.Connector),
+        connector,
         diagramPrefix: VSCodeSettings.commands.prefix
+    });
+
+    configureCollaborationCommands({
+        extensionContext: context,
+        connector
     });
 
     diContainer.getAll<any>(TYPES.RootInitialization);
