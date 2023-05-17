@@ -26,6 +26,7 @@ import { OutputChannel } from './vscode/output/output.channel';
 import { Settings } from './vscode/settings/settings';
 import { WorkspaceWatcher } from './vscode/workspace/workspace.watcher';
 import {UVLiveshareGlspClientProvider} from './liveshare/uv-liveshare-glsp-client-provider';
+import {InitLiveshareConfigCommand} from './liveshare/init-liveshare-config.command';
 
 export function createContainer(
     context: vscode.ExtensionContext,
@@ -54,6 +55,7 @@ export function createContainer(
 
         bind(UVLiveshareGlspClientProvider).toSelf().inSingletonScope();
         bind(TYPES.CollaborationGlspClientProvider).toService(UVLiveshareGlspClientProvider);
+        bind(TYPES.Command).to(InitLiveshareConfigCommand);
 
         bind(UVGlspServer).toSelf().inSingletonScope();
         bind(TYPES.GlspServer).toService(UVGlspServer);

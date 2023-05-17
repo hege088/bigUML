@@ -66,6 +66,11 @@
         "enablement": "workspaceFolderCount > 0"
       },
       {
+        "command": "bigUML.liveshare.init",
+        "title": "Initialize Liveshare for UML",
+        "category": "bigUML"
+      },
+      {
         "command": "bigUML.fit",
         "title": "Fit to Screen",
         "category": "bigUML",
@@ -157,6 +162,10 @@
           "command": "bigUML.model.newEmpty",
           "group": "navigation@10",
           "when": "explorerResourceIsFolder || explorerResourceIsRoot"
+        },
+        {
+          "command": "bigUML.liveshare.init",
+          "group": "navigation@11"
         }
       ],
       "editor/title": [
@@ -188,7 +197,8 @@
   "activationEvents": [
     "onLanguage:bigUML.uml",
     "onLanguage:bigUML.unotation",
-    "onCommand:bigUML.model.newEmpty"
+    "onCommand:bigUML.model.newEmpty",
+    "onCommand:bigUML.liveshare.init"
   ],
   "dependencies": {
     "@borkdominik-biguml/uml-common": "*",
